@@ -22,6 +22,9 @@ const config = {
   resolve: {
     extensions: ['.js', '.vue'],
   },
+  stats: {
+    children: false,
+  },
   module: {
     rules: [
       {
