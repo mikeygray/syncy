@@ -1,7 +1,15 @@
 <template>
   <div id="syncy-main">
-    <h1>Hello, Syncy!</h1>
-    <pre id="syncy-content">{{ content }}</pre>
+    <v-app>
+      <v-content>
+        <v-container>
+          <h1>Hello, Syncy!</h1>
+        </v-container>
+        <v-container>
+          <pre id="syncy-content">{{ content }}</pre>
+        </v-container>
+      </v-content>
+    </v-app>
   </div>
 </template>
 
@@ -9,21 +17,21 @@
 const browser = require('webextension-polyfill');
 export default {
   name: 'syncy-main-app',
-  data: function() {
+  data: function () {
     return {
       content: '... loading ...',
     };
   },
-  mounted: function() {
+  mounted: function () {
     /** Use an anonymous function to maintain 'this' context */
-    chrome.tabs.query({}, tabArray => {
+    chrome.tabs.query({}, (tabArray) => {
       this.content = JSON.stringify(tabArray, undefined, 2);
     });
   },
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 #syncy-content {
   font-size: 12px;
 }
