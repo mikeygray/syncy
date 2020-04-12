@@ -1,6 +1,5 @@
 const webpack = require('webpack');
 const ejs = require('ejs');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const ExtensionReloader = require('webpack-extension-reloader');
 const { VueLoaderPlugin } = require('vue-loader');
@@ -9,6 +8,7 @@ const { version } = require('./package.json');
 
 const config = {
   mode: process.env.NODE_ENV,
+  devtool: 'eval-source-map',
   context: __dirname + '/src',
   entry: {
     background: './background.js',
@@ -38,10 +38,13 @@ const config = {
         exclude: /node_modules/,
       },
       {
+        test: /\.css$/,
+        loader: 'css-loader',
+      },
+      {
         test: /\.s(c|a)ss$/,
         use: [
           'vue-style-loader',
-          MiniCssExtractPlugin.loader,
           'css-loader',
           {
             loader: 'sass-loader',
@@ -78,9 +81,6 @@ const config = {
     }),
     new VueLoaderPlugin(),
     new VuetifyLoaderPlugin(),
-    new MiniCssExtractPlugin({
-      filename: '[name].css',
-    }),
     new CopyPlugin([
       { from: 'icons', to: 'icons', ignore: ['icon.psd'] },
       { from: 'main/main.html', to: 'main/main.html', transform: transformHtml },
