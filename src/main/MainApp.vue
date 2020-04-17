@@ -1,17 +1,23 @@
 <template>
-  <v-app id="syncy-main">
+  <v-app id="main">
     <HeaderNav />
     <v-content>
       <v-container fluid>
-        <h2>Browser - {{ deviceid }}</h2>
-        <h3>Windows</h3>
-        <pre class="syncy-content">{{ wincontent }}</pre>
-        <h3>Tabs</h3>
-        <pre class="syncy-content">{{ tabcontent }}</pre>
-        <h3>Devices</h3>
-        <pre class="syncy-content">{{ devicecontent }}</pre>
-        <h3>Recent</h3>
-        <pre class="syncy-content">{{ recentcontent }}</pre>
+        <h1>Browser - {{ deviceId }}</h1>
+
+        <WindowsList title="Current Tabs" v-bind:browserdata="this.thisBrowserData"></WindowsList>
+
+        <LinksList title="Recent Tabs" v-bind:items="this.thisRecentData"></LinksList>
+
+        <v-divider inset class="mx-auto"></v-divider>
+
+        <h1>Debug</h1>
+        <h2>Windows</h2>
+        <pre class="syncy-content">{{ winContent }}</pre>
+        <h2>Devices</h2>
+        <pre class="syncy-content">{{ deviceContent }}</pre>
+        <h2>Recent</h2>
+        <pre class="syncy-content">{{ JSON.stringify(thisRecentData, undefined, 2) }}</pre>
       </v-container>
     </v-content>
     <Footer />
@@ -19,49 +25,68 @@
 </template>
 
 <script>
-import HeaderNav from './components/HeaderNav';
-import Footer from './components/Footer';
+  import HeaderNav from './components/HeaderNav';
+  import Footer from './components/Footer';
+  import WindowsList from './components/WindowsList';
+  import LinksList from './components/LinksList';
+  import {
+    identifyBrowser,
+    emptyBrowserData,
+    parseWindowData,
+    emptyTabList,
+    parseRecentData,
+  } from './tools';
 
-const browser = require('webextension-polyfill');
+  const browser = require('webextension-polyfill');
 
-export default {
-  name: 'syncy-main',
-  components: {
-    HeaderNav,
-    Footer,
-  },
-  data: function () {
-    return {
-      deviceid: 'unknown',
-      wincontent: '... loading ...',
-      tabcontent: '... loading ...',
-      devicecontent: '... loading ...',
-      recentcontent: '... loading ...',
-    };
-  },
-  created() {
-    /** Use an anonymous function to maintain 'this' context */
-    chrome.instanceID.getID((id) => {
-      this.deviceid = id;
-    });
-    chrome.windows.getAll({ populate: true }, (winArray) => {
-      this.wincontent = JSON.stringify(winArray, undefined, 2);
-    });
-    chrome.tabs.query({}, (tabArray) => {
-      this.tabcontent = JSON.stringify(tabArray, undefined, 2);
-    });
-    chrome.sessions.getDevices({}, (deviceArray) => {
-      this.devicecontent = JSON.stringify(deviceArray, undefined, 2);
-    });
-    chrome.sessions.getRecentlyClosed({}, (recentArray) => {
-      this.recentcontent = JSON.stringify(recentArray, undefined, 2);
-    });
-  },
-};
+  export default {
+    name: 'syncy-main',
+    components: {
+      HeaderNav,
+      Footer,
+      LinksList,
+      WindowsList,
+    },
+    data: function () {
+      return {
+        thisBrowserData: emptyBrowserData,
+        thisRecentData: emptyTabList,
+        deviceId: 'unknown',
+        winContent: '... loading ...',
+        deviceContent: '... loading ...',
+      };
+    },
+    created() {
+      /** Use an anonymous function to maintain 'this' context */
+      chrome.windows.getAll({ populate: true }, (winArray) => {
+        chrome.instanceID.getID((id) => {
+          this.winContent = JSON.stringify(winArray, undefined, 2);
+          let browsername = identifyBrowser(navigator.userAgent);
+          this.deviceId = browsername + ' - ' + id;
+          this.thisBrowserData = parseWindowData(id, browsername, winArray);
+        });
+      });
+      chrome.sessions.getDevices({}, (deviceArray) => {
+        this.deviceContent = JSON.stringify(deviceArray, undefined, 2);
+      });
+      chrome.sessions.getRecentlyClosed({}, (recentArray) => {
+        this.thisRecentData = parseRecentData(recentArray);
+      });
+    },
+  };
 </script>
 
 <style lang="scss" scoped>
-.syncy-content {
-  font-size: 12px;
-}
+  main.v-content {
+    width: 100vw;
+    height: calc(100vh - 58px - 48px);
+    flex-direction: column;
+    overflow-y: scroll;
+    margin-top: 58px;
+    margin-bottom: 48px;
+    padding-top: 0 !important;
+  }
+  .syncy-content {
+    font-size: 12px;
+  }
 </style>
