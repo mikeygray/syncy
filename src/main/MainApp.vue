@@ -5,9 +5,15 @@
       <v-container fluid>
         <h1>Browser - {{ deviceId }}</h1>
 
-        <WindowsList title="Current Tabs" v-bind:browserdata="this.thisBrowserData"></WindowsList>
+        <LegacyWindowsList
+          title="Current Tabs"
+          v-bind:windowsData="this.thisBrowserData"
+        ></LegacyWindowsList>
 
-        <LinksList title="Recent Tabs" v-bind:items="this.thisRecentData"></LinksList>
+        <LegacyCardLinksList
+          title="Recent Tabs"
+          v-bind:items="this.thisRecentsData"
+        ></LegacyCardLinksList>
 
         <v-divider inset class="mx-auto"></v-divider>
 
@@ -17,7 +23,7 @@
         <h2>Devices</h2>
         <pre class="syncy-content">{{ deviceContent }}</pre>
         <h2>Recent</h2>
-        <pre class="syncy-content">{{ JSON.stringify(thisRecentData, undefined, 2) }}</pre>
+        <pre class="syncy-content">{{ JSON.stringify(thisRecentsData, undefined, 2) }}</pre>
       </v-container>
     </v-content>
     <Footer />
@@ -27,14 +33,14 @@
 <script>
   import HeaderNav from './components/HeaderNav';
   import Footer from './components/Footer';
-  import WindowsList from './components/WindowsList';
-  import LinksList from './components/LinksList';
+  import LegacyWindowsList from './components/legacy_WindowsList';
+  import LegacyCardLinksList from './components/legacy_CardLinksList';
   import {
     identifyBrowser,
     emptyBrowserData,
-    parseWindowData,
+    parseWindowsData,
     emptyTabList,
-    parseRecentData,
+    parseRecentsData,
   } from './tools';
 
   const browser = require('webextension-polyfill');
@@ -44,13 +50,13 @@
     components: {
       HeaderNav,
       Footer,
-      LinksList,
-      WindowsList,
+      LegacyCardLinksList,
+      LegacyWindowsList,
     },
     data: function () {
       return {
         thisBrowserData: emptyBrowserData,
-        thisRecentData: emptyTabList,
+        thisRecentsData: emptyTabList,
         deviceId: 'unknown',
         winContent: '... loading ...',
         deviceContent: '... loading ...',
@@ -62,15 +68,15 @@
         chrome.instanceID.getID((id) => {
           this.winContent = JSON.stringify(winArray, undefined, 2);
           let browsername = identifyBrowser(navigator.userAgent);
-          this.deviceId = browsername + ' - ' + id;
-          this.thisBrowserData = parseWindowData(id, browsername, winArray);
+          this.deviceId = browsername + ' - ID: ' + id;
+          this.thisBrowserData = parseWindowsData(id, browsername, winArray);
         });
       });
       chrome.sessions.getDevices({}, (deviceArray) => {
         this.deviceContent = JSON.stringify(deviceArray, undefined, 2);
       });
       chrome.sessions.getRecentlyClosed({}, (recentArray) => {
-        this.thisRecentData = parseRecentData(recentArray);
+        this.thisRecentsData = parseRecentsData(recentArray);
       });
     },
   };

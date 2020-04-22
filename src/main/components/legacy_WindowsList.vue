@@ -13,18 +13,20 @@
 
     <div class="d-flex flex-row">
       <div class="ma-6">
-        <v-icon x-large v-if="browserdata.name === 'edge'">{{ edgeicon }}</v-icon>
-        <v-icon x-large v-else-if="browserdata.name === 'brave'">{{ braveicon }}</v-icon>
-        <v-icon x-large v-else-if="browserdata.name === 'chrome'">{{ chromeicon }}</v-icon>
+        <v-icon x-large v-if="windowsData.name === 'edge'">{{ edgeicon }}</v-icon>
+        <v-icon x-large v-else-if="windowsData.name === 'brave'">{{ braveicon }}</v-icon>
+        <!-- ⬆ doesn't exist yet! -->
+        <v-icon x-large v-else-if="windowsData.name === 'opera'">{{ operaicon }}</v-icon>
+        <v-icon x-large v-else-if="windowsData.name === 'chrome'">{{ chromeicon }}</v-icon>
         <v-icon x-large v-else>{{ unknownicon }}</v-icon>
       </div>
       <div>
-        <v-card-title class="text-capitalize display-1">{{ browserdata.name }}</v-card-title>
-        <v-card-subtitle>ID: {{ browserdata.id }}</v-card-subtitle>
+        <v-card-title class="text-capitalize display-1">{{ windowsData.name }}</v-card-title>
+        <v-card-subtitle>ID: {{ windowsData.id }}</v-card-subtitle>
       </div>
     </div>
 
-    <v-list shaped two-line v-for="window in browserdata.windows" :key="window.id">
+    <v-list shaped two-line v-for="window in windowsData.windows" :key="window.id">
       <v-subheader class="text-capitalize">{{ window.title }}</v-subheader>
       <v-list-item v-for="tab in window.tabs" :key="tab.id" v-bind:href="tab.url">
         <v-list-item-avatar>
@@ -43,6 +45,7 @@
   import {
     mdiMicrosoftEdge,
     mdiGoogleChrome,
+    mdiOpera,
     mdiDotsVertical,
     mdiPin,
     mdiSafeSquare,
@@ -53,13 +56,14 @@
       chromeicon: mdiGoogleChrome,
       braveicon: mdiSafeSquare,
       edgeicon: mdiMicrosoftEdge,
+      operaicon: mdiOpera,
       unknownicon: mdiHelpBox,
       dotsicon: mdiDotsVertical,
       pinicon: mdiPin,
     }),
     props: {
       title: String,
-      browserdata: Object,
+      windowsData: Object,
     },
   };
 </script>

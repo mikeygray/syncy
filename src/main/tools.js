@@ -1,31 +1,4 @@
-export const parseTabObject = (tabDataIn = {}) => {
-  return {
-    id: tabDataIn.id,
-    title: tabDataIn.title,
-    url: tabDataIn.url,
-    imageurl: tabDataIn.favIconUrl,
-    pinned: tabDataIn.pinned,
-  };
-};
-
-export const emptyBrowserData = {
-  id: '',
-  name: 'unknown',
-  windows: [
-    {
-      id: -1,
-      tabs: [
-        {
-          id: -1,
-          title: '',
-          url: '',
-          imageurl: '',
-          pinned: false,
-        },
-      ],
-    },
-  ],
-};
+import { mdiMicrosoftEdge, mdiGoogleChrome, mdiOpera, mdiSafeSquare, mdiHelpBox } from '@mdi/js';
 
 export const emptyTabList = [
   {
@@ -37,36 +10,68 @@ export const emptyTabList = [
   },
 ];
 
-export const parseWindowData = (idIn = '', nameIn = '', windowDataIn = []) => {
+export const emptyBrowserData = {
+  id: '',
+  name: 'unknown',
+  windows: [
+    {
+      id: -1,
+      tabs: emptyTabList,
+    },
+  ],
+};
+
+const isUrlBrowserInternal = (url = '') => {
+  return [
+    'chrome:',
+    'chrome-extension:',
+    'brave:',
+    'edge:',
+    'extension:',
+    'settings',
+    'extensions',
+  ].some((substring) => url.startsWith(substring));
+};
+
+export const parseTabObject = (tabData = {}) => {
+  return {
+    id: tabData.id,
+    title: tabData.title,
+    url: tabData.url,
+    imageurl: tabData.favIconUrl,
+    pinned: tabData.pinned,
+  };
+};
+
+export const parseWindowsData = (browserId = '', browserName = '', windowData = []) => {
   let returnData = {
-    id: idIn,
-    name: nameIn,
+    id: browserId,
+    name: browserName,
     windows: [],
   };
-  for (const window of windowDataIn) {
+  for (const window of windowData) {
     let windowEntry = {
       id: window.id,
       title: 'Window ' + window.id,
       tabs: [],
     };
     for (const tab of window.tabs) {
-      windowEntry.tabs.push(parseTabObject(tab));
+      if (!isUrlBrowserInternal(tab.url)) windowEntry.tabs.push(parseTabObject(tab));
     }
     returnData.windows.push(windowEntry);
   }
   return returnData;
 };
 
-/** Parse depending on windows entry or tab entry, flatten regardless */
-export const parseRecentData = (recentDataIn = []) => {
+export const parseRecentsData = (recentData = []) => {
   let returnData = [];
-  for (const recent of recentDataIn) {
+  for (const recent of recentData) {
     if (Object.prototype.hasOwnProperty.call(recent, 'window')) {
       for (const tab of recent.window.tabs) {
-        returnData.push(parseTabObject(tab));
+        if (!isUrlBrowserInternal(tab.url)) returnData.push(parseTabObject(tab));
       }
     } else {
-      returnData.push(parseTabObject(recent.tab));
+      if (!isUrlBrowserInternal(recent.tab.url)) returnData.push(parseTabObject(recent.tab));
     }
   }
   return returnData;
@@ -74,7 +79,26 @@ export const parseRecentData = (recentDataIn = []) => {
 
 export const identifyBrowser = (useragent = '') => {
   if (useragent.includes('Edg/')) return 'edge';
-  else if (useragent.includes('Chromium/')) return 'chromium';
+  /** doesn't exist ➡ */ else if (useragent.includes('Chromium/')) return 'chromium';
+  /** doesn't exist (yet) ➡ */ else if (useragent.includes('Brave/')) return 'brave';
+  else if (useragent.includes('OPR/')) return 'opera';
   else if (useragent.includes('Chrome/')) return 'chrome';
   else return 'unknown';
+};
+
+export const getBrowserIcon = (browserName = '') => {
+  switch (browserName) {
+    case 'edge':
+      return mdiMicrosoftEdge;
+    case 'brave':
+      /** doesn't exist (yet) */
+      return mdiSafeSquare;
+    case 'opera':
+      return mdiOpera;
+    case 'chrome':
+    case 'chromium':
+      return mdiGoogleChrome;
+    default:
+      return mdiHelpBox;
+  }
 };

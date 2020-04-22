@@ -1,6 +1,6 @@
 <template>
   <v-footer app class="elevation-12">
-    <v-row dense>
+    <v-row dense justify="space-around">
       <v-spacer></v-spacer>
       <v-btn class="pb-1 mr-2" icon @click="window.open('https://twitter.com/sirmikey')">
         <v-icon medium>{{ twittericon }}</v-icon>
