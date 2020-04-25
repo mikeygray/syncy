@@ -1,6 +1,6 @@
 {
   "name": "syncy",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A simple extension for syncing browser data using your google account",
   "author": "Mikey Gray <info@mikeygray.co.uk>",
   "scripts": {

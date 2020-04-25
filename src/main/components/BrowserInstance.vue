@@ -1,56 +1,43 @@
 <template>
   <v-card class="ma-auto">
-    <v-toolbar justify="space-around">
-      <v-icon>{{ browsericon }}</v-icon>
-      <v-toolbar-title class="text-capitalize">{{ browserName }}</v-toolbar-title>
-      <v-card-subtitle>ID: {{ browserId }}</v-card-subtitle>
+    <v-toolbar>
+      <v-icon large>{{ browserIcon }}</v-icon>
+      <v-toolbar-title large class="text-capitalize ml-2">{{ browsername }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-tooltip top>
+      <v-card-subtitle>ID: {{ browserid }}</v-card-subtitle>
+      <v-spacer></v-spacer>
+      <v-tooltip bottom>
         <template v-slot:activator="{ on }">
-          <v-btn icon v-on="on" @click="expandAll">
-            <v-icon>{{ mdiExpandAll }}</v-icon>
+          <v-btn icon v-on="on" :disabled="openPanels.length === numberOfPanels" @click="expandAll">
+            <v-icon>{{ expandIcon }}</v-icon>
           </v-btn>
         </template>
         <span>Expand All</span>
       </v-tooltip>
-      <v-tooltip top>
+      <v-tooltip bottom>
         <template v-slot:activator="{ on }">
-          <v-btn icon v-on="on" @click="expandAll">
-            <v-icon>{{ mdiCollapseAll }}</v-icon>
+          <v-btn icon v-on="on" :disabled="openPanels.length === 0" @click="collapseAll">
+            <v-icon>{{ collapseIcon }}</v-icon>
           </v-btn>
         </template>
         <span>Collapse All</span>
       </v-tooltip>
     </v-toolbar>
 
-    <v-expansion-panels v-model="openPanels" multiple inset>
-      <!-- Windows -->
-      <v-expansion-panel v-for="(windowData, panelIndex) in windowsData.windows" :key="panelIndex">
+    <v-expansion-panels v-model="openPanels" multiple inset class="ma-auto pa-1">
+      <v-expansion-panel
+        v-for="(panel, panelIndex) in tabpanelsdata"
+        :key="panelIndex"
+        class="ma-1"
+      >
         <v-expansion-panel-header>
-          {{ panelIndex }} - Open Window ID: {{ windowData.id }} ({{ windowData.tabs.length }} tabs)
+          <div class="subtitle-1">
+            {{ panelIndex }} - {{ panel.title }} ({{ panel.tabs.length }} tabs)
+          </div>
+          <div v-if="panel.id.length > 0" class="font-weight-light">ID: {{ panel.id }}</div>
         </v-expansion-panel-header>
         <v-expansion-panel-content>
-          <LinksList v-bind:items="windowData.tabs"></LinksList>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-
-      <!-- Recents -->
-      <v-expansion-panel :key="recentsPanelIndex">
-        <v-expansion-panel-header>
-          {{ recentsPanelIndex }} - Recent Tabs ({{ recentsData.length }} tabs)
-        </v-expansion-panel-header>
-        <v-expansion-panel-content>
-          <LinksList v-bind:items="recentsData"></LinksList>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-
-      <!-- Device Tabs -->
-      <v-expansion-panel :key="devicesPanelIndex">
-        <v-expansion-panel-header>
-          {{ devicesPanelIndex }} - Other Device Tabs
-        </v-expansion-panel-header>
-        <v-expansion-panel-content>
-          Not Implemented
+          <LinksList :items="panel.tabs"></LinksList>
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -59,26 +46,32 @@
 
 <script>
   import LinksList from './LinksList';
-  import getBrowserIcon from '../tools';
-  import { mdiExpandAll, mdiCollapseAll } from '@mdi/js';
+  import { getBrowserIcon } from '../../common/tools';
+  import { mdiExpandAll, mdiCollapseAll, mdiHelpCircle } from '@mdi/js';
   export default {
     props: {
-      browserId: String,
-      browserName: String,
-      windowsData: Object,
-      recentsData: Object,
-      devicesData: Object,
+      browserid: String,
+      browsername: String,
+      tabpanelsdata: Array,
     },
     components: {
       LinksList,
     },
-    data: () => ({
-      browsericon: getBrowserIcon(browserName),
-      numberOfPanels: windowsData.windows.length() + 2,
-      openPanels: [],
-      recentsPanelIndex: numberOfPanels - 2,
-      devicesPanelIndex: numberOfPanels - 1,
-    }),
+    data: function () {
+      return {
+        expandIcon: mdiExpandAll,
+        collapseIcon: mdiCollapseAll,
+        openPanels: [0],
+      };
+    },
+    computed: {
+      browserIcon: function () {
+        return this.browsername ? getBrowserIcon(this.browsername) : mdiHelpCircle;
+      },
+      numberOfPanels: function () {
+        return this.tabpanelsdata ? this.tabpanelsdata.length : 0;
+      },
+    },
     methods: {
       expandAll() {
         this.openPanels = [...Array(this.numberOfPanels).keys()].map((k, i) => i);
@@ -86,9 +79,6 @@
       collapseAll() {
         this.openPanels = [];
       },
-    },
-    created() {
-      this.expandAll();
     },
   };
 </script>

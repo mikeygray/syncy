@@ -3,27 +3,43 @@
     <HeaderNav />
     <v-content>
       <v-container fluid>
-        <h1>Browser - {{ deviceId }}</h1>
+        <h1 class="my-2">This Browser</h1>
 
-        <LegacyWindowsList
-          title="Current Tabs"
-          v-bind:windowsData="this.thisBrowserData"
-        ></LegacyWindowsList>
+        <BrowserInstance
+          :browserid="thisBrowserID"
+          :browsername="thisBrowserName"
+          :tabpanelsdata="thisTabPanels"
+        ></BrowserInstance>
 
-        <LegacyCardLinksList
-          title="Recent Tabs"
-          v-bind:items="this.thisRecentsData"
-        ></LegacyCardLinksList>
+        <v-divider class="my-6"></v-divider>
 
-        <v-divider inset class="mx-auto"></v-divider>
-
-        <h1>Debug</h1>
-        <h2>Windows</h2>
-        <pre class="syncy-content">{{ winContent }}</pre>
-        <h2>Devices</h2>
-        <pre class="syncy-content">{{ deviceContent }}</pre>
-        <h2>Recent</h2>
-        <pre class="syncy-content">{{ JSON.stringify(thisRecentsData, undefined, 2) }}</pre>
+        <h1 class="my-2">Debug</h1>
+        <v-expansion-panels>
+          <v-expansion-panel>
+            <v-expansion-panel-header>Raw Windows Data</v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <pre class="syncy-content">{{ tempWindowContent }}</pre>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+          <v-expansion-panel>
+            <v-expansion-panel-header>Raw Recents Data</v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <pre class="syncy-content">{{ tempRecentsContent }}</pre>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+          <v-expansion-panel>
+            <v-expansion-panel-header>Raw Devices Data</v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <pre class="syncy-content">{{ tempDeviceContent }}</pre>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+          <v-expansion-panel>
+            <v-expansion-panel-header>Parsed TabPanel Data</v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <pre class="syncy-content">{{ JSON.stringify(thisTabPanels, undefined, 2) }}</pre>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-container>
     </v-content>
     <Footer />
@@ -33,56 +49,60 @@
 <script>
   import HeaderNav from './components/HeaderNav';
   import Footer from './components/Footer';
-  import LegacyWindowsList from './components/legacy_WindowsList';
-  import LegacyCardLinksList from './components/legacy_CardLinksList';
+  import BrowserInstance from './components/BrowserInstance';
   import {
     identifyBrowser,
-    emptyBrowserData,
     parseWindowsData,
-    emptyTabList,
     parseRecentsData,
-  } from './tools';
+    parseDevicesData,
+  } from '../common/tools';
 
   const browser = require('webextension-polyfill');
 
   export default {
-    name: 'syncy-main',
     components: {
       HeaderNav,
       Footer,
-      LegacyCardLinksList,
-      LegacyWindowsList,
+      BrowserInstance,
     },
     data: function () {
       return {
-        thisBrowserData: emptyBrowserData,
-        thisRecentsData: emptyTabList,
-        deviceId: 'unknown',
-        winContent: '... loading ...',
-        deviceContent: '... loading ...',
+        thisBrowserID: 'unknown',
+        thisBrowserName: 'unknown',
+        thisTabPanels: [],
+        tempWindowContent: '... loading ...',
+        tempDeviceContent: '... loading ...',
+        tempRecentsContent: '... loading ...',
       };
     },
-    created() {
-      /** Use an anonymous function to maintain 'this' context */
+    created: function () {
+      /** Use an anonymous functions to maintain 'this' context */
+      chrome.instanceID.getID((id) => {
+        this.thisBrowserID = id;
+      });
+
+      this.thisBrowserName = identifyBrowser(navigator.userAgent);
+
       chrome.windows.getAll({ populate: true }, (winArray) => {
-        chrome.instanceID.getID((id) => {
-          this.winContent = JSON.stringify(winArray, undefined, 2);
-          let browsername = identifyBrowser(navigator.userAgent);
-          this.deviceId = browsername + ' - ID: ' + id;
-          this.thisBrowserData = parseWindowsData(id, browsername, winArray);
-        });
+        this.thisTabPanels.unshift(...parseWindowsData(winArray));
+        this.tempWindowContent = JSON.stringify(winArray, undefined, 2);
       });
-      chrome.sessions.getDevices({}, (deviceArray) => {
-        this.deviceContent = JSON.stringify(deviceArray, undefined, 2);
-      });
+
       chrome.sessions.getRecentlyClosed({}, (recentArray) => {
-        this.thisRecentsData = parseRecentsData(recentArray);
+        this.thisTabPanels.push(parseRecentsData(recentArray));
+        this.tempRecentsContent = JSON.stringify(recentArray, undefined, 2);
+      });
+
+      chrome.sessions.getDevices({}, (deviceArray) => {
+        this.thisTabPanels.push(...parseDevicesData(deviceArray));
+        this.tempDeviceContent = JSON.stringify(deviceArray, undefined, 2);
       });
     },
   };
 </script>
 
 <style lang="scss" scoped>
+  /** primarily to trap scrollbars in central conatiner */
   main.v-content {
     width: 100vw;
     height: calc(100vh - 58px - 48px);

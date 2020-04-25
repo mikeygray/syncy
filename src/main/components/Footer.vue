@@ -15,8 +15,8 @@
 <script>
   import { mdiTwitter } from '@mdi/js';
   export default {
-    data: () => ({
-      twittericon: mdiTwitter,
-    }),
+    data: function () {
+      return { twittericon: mdiTwitter };
+    },
   };
 </script>

@@ -37,14 +37,16 @@
   import { mdiViewDashboard, mdiArrowLeft, mdiCog, mdiBug } from '@mdi/js';
 
   export default {
-    data: () => ({
-      drawer: false,
-      backButton: mdiArrowLeft,
-      items: [
-        { id: 1, title: 'Home', icon: mdiViewDashboard },
-        { id: 2, title: 'Settings', icon: mdiCog },
-        { id: 4, title: 'Bugs/Ideas', subtitle: 'Problems? Suggestions?', icon: mdiBug },
-      ],
-    }),
+    data: function () {
+      return {
+        drawer: false,
+        backButton: mdiArrowLeft,
+        items: [
+          { id: 1, title: 'Home', icon: mdiViewDashboard },
+          { id: 2, title: 'Settings', icon: mdiCog },
+          { id: 4, title: 'Bugs/Ideas', subtitle: 'Problems? Suggestions?', icon: mdiBug },
+        ],
+      };
+    },
   };
 </script>
