@@ -1,34 +1,73 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
-global.browser = require('webextension-polyfill');
 
-/** Open main interface when icon is clicked */
+/** open main page when extension icon is clicked */
 chrome.browserAction.onClicked.addListener(function () {
   var newURL = 'main/main.html';
   chrome.tabs.create({ url: newURL });
 });
 
-/** Tab events listened to */
-chrome.tabs.onCreated.addListener(tabStateChanged());
-chrome.tabs.onUpdated.addListener(tabStateChanged());
-chrome.tabs.onRemoved.addListener(tabStateChanged());
+/**
+ * TODO: At the moment background.js is acting as the controller. This probably needs to change.
+ */
 
-/** Window Events?
-chrome.tabs.onDetached.addListener(tabStateChanged());
-chrome.tabs.onAttached.addListener(tabStateChanged());
-chrome.tabs.onMoved.addListener(tabStateChanged());
-*/
+/** debug storage output */
+chrome.storage.onChanged.addListener(function (changes, namespace) {
+  for (const key of changes) {
+    let storageChange = changes[key];
+    console.log(
+      'STORAGE CHANGED: Key "%s" in namespace "%s" ~ Old value: "%s", New value: "%s"',
+      key,
+      namespace,
+      storageChange.oldValue,
+      storageChange.newValue
+    );
+  }
+});
 
-function tabStateChanged() {
-  chrome.tabs.query({}, function (tabArray) {
-    chrome.storage.local.set({ syncyCurrentLocalTabs: tabArray }, function () {
-      console.log('TAB DATA ADDED TO STORAGE ~ ' + JSON.stringify(tabArray));
-      //Send refresh command to main.js?
-    });
-  });
-}
+/** debug tab output */
+chrome.tabs.onCreated.addListener(function (tab) {
+  console.log('TAB CREATED: TabId "%s" in window "%s"', tab.id, tab.windowId);
+});
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+  console.log(
+    'TAB UPDATED: TabId "%s" in window "%s" ~ changeInfo: "%s"',
+    tabId,
+    tab.windowId,
+    JSON.stringify(changeInfo)
+  );
+});
+chrome.tabs.onMoved.addListener(function (tabId, moveInfo) {
+  console.log(
+    'TAB MOVED: TabId "%s" in window "%s" ~ fromIndex: "%s", toIndex: "%s"',
+    tabId,
+    moveInfo.windowId,
+    moveInfo.fromIndex,
+    moveInfo.toIndex
+  );
+});
+chrome.tabs.onDetached.addListener(function (tabId, detachInfo) {
+  console.log(
+    'TAB DETATCHED: TabId "%s" ~ oldWindowId: "%s", oldPosition: "%s"',
+    tabId,
+    detachInfo.oldWindowId,
+    detachInfo.oldPosition
+  );
+});
+chrome.tabs.onAttached.addListener(function (tabId, attachInfo) {
+  console.log(
+    'TAB ATTACHED: TabId "%s" ~ newWindowId: "%s", newPosition: "%s"',
+    tabId,
+    attachInfo.newWindowId,
+    attachInfo.newPosition
+  );
+});
+chrome.tabs.onReplaced.addListener(function (addedTabId, removedTabId) {
+  console.log('TAB REMOVED: addedTabId: "%s", removedTabId: "%s"', addedTabId, removedTabId);
+});
 
-/*
-function sanitizeInput(input) {
-  return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-}
-*/
+/** Any last actions before background.js is unloaded */
+chrome.runtime.onSuspend.addListener(function () {
+  console.log('background.js unloading');
+  //chrome.browserAction.setBadgeText({text: ""});
+});

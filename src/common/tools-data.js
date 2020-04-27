@@ -1,19 +1,4 @@
-import { mdiMicrosoftEdge, mdiGoogleChrome, mdiOpera, mdiSafeSquare, mdiHelpBox } from '@mdi/js';
-
-/**
- * @description checks url for "internal style" urls
- */
-const isUrlBrowserInternal = (url = '') => {
-  return [
-    'chrome:',
-    'chrome-extension:',
-    'brave:',
-    'edge:',
-    'extension:',
-    'settings',
-    'extensions',
-  ].some((substring) => url.startsWith(substring));
-};
+import { isUrlBrowserInternal, hashStringToInt } from './tools-helpers';
 
 /**
  * @description takes verbose tab data and strips out only what is needed
@@ -21,6 +6,7 @@ const isUrlBrowserInternal = (url = '') => {
 export const parseTabObject = (tabData = {}) => {
   return {
     id: tabData.id,
+    index: tabData.index,
     title: tabData.title,
     url: tabData.url,
     imageurl: tabData.favIconUrl,
@@ -35,7 +21,8 @@ export const parseWindowsData = (windowData = []) => {
   let returnData = [];
   for (const window of windowData) {
     let windowEntry = {
-      id: '' + window.id,
+      id: window.id,
+      name: 'Window ' + window.id,
       title: 'Window',
       tabs: [],
     };
@@ -53,7 +40,8 @@ export const parseWindowsData = (windowData = []) => {
  */
 export const parseRecentsData = (recentData = []) => {
   let returnData = {
-    id: '',
+    id: -1,
+    name: 'Recents',
     title: 'Recent',
     tabs: [],
   };
@@ -76,7 +64,8 @@ export const parseDevicesData = (deviceData = []) => {
   let returnData = [];
   for (const device of deviceData) {
     let deviceEntry = {
-      id: device.deviceName,
+      id: hashStringToInt(device.deviceName),
+      name: device.deviceName,
       title: 'Device',
       tabs: [],
     };
@@ -88,37 +77,4 @@ export const parseDevicesData = (deviceData = []) => {
     returnData.push(deviceEntry);
   }
   return returnData;
-};
-
-/**
- * @description tries to identify the browser type from the useragent and mostly fails in this duty
- */
-export const identifyBrowser = (useragent = '') => {
-  if (useragent.includes('Edg/')) return 'edge';
-  /** doesn't exist ➡ */ else if (useragent.includes('Chromium/')) return 'chromium';
-  /** doesn't exist (yet) ➡ */ else if (useragent.includes('Brave/')) return 'brave';
-  /** doesn't exist ➡ */ else if (useragent.includes('Vivaldi/')) return 'vivaldi';
-  else if (useragent.includes('OPR/')) return 'opera';
-  else if (useragent.includes('Chrome/')) return 'chrome';
-  else return 'unknown';
-};
-
-/**
- * @returns the svg code for an icon representing the browser
- */
-export const getBrowserIcon = (browserName = '') => {
-  switch (browserName) {
-    case 'edge':
-      return mdiMicrosoftEdge;
-    case 'brave':
-      /** doesn't exist (yet) */
-      return mdiSafeSquare;
-    case 'opera':
-      return mdiOpera;
-    case 'chrome':
-    case 'chromium':
-      return mdiGoogleChrome;
-    default:
-      return mdiHelpBox;
-  }
 };

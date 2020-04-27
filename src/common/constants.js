@@ -1,6 +1,7 @@
 export const emptyTabArray = [
   {
     id: -1,
+    index: -1 /* if the tabs have an order */,
     title: '',
     url: '',
     imageurl: '',
@@ -8,22 +9,17 @@ export const emptyTabArray = [
   },
 ];
 
+export const emptyRecentsArray = emptyTabArray;
+
 export const emptyPanelsArray = [
   {
-    id: 0,
+    id: -1,
+    name: '',
     title: '',
     tabs: emptyTabArray,
   },
 ];
 
-/** Legacy */
-export const emptyBrowserData = {
-  id: '',
-  name: 'unknown',
-  windows: [
-    {
-      id: -1,
-      tabs: emptyTabArray,
-    },
-  ],
-};
+export const emptyWindowsArray = emptyPanelsArray;
+
+export const emptyDevicesArray = emptyPanelsArray;
