@@ -9,7 +9,8 @@ export default new Vuetify({
   },
 });
 
-/** Need to theme!
+/**
+ * TODO: Need to theme!
  *
  *   theme: {
  *   dark: true,

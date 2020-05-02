@@ -16,6 +16,12 @@
         <h1 class="my-2">Debug</h1>
         <v-expansion-panels>
           <v-expansion-panel>
+            <v-expansion-panel-header>Parsed Storage Data</v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <pre class="syncy-content">{{ tempStorageContent }}</pre>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+          <v-expansion-panel>
             <v-expansion-panel-header>Raw Windows Data</v-expansion-panel-header>
             <v-expansion-panel-content>
               <pre class="syncy-content">{{ tempWindowContent }}</pre>
@@ -50,12 +56,13 @@
   import HeaderNav from './components/HeaderNav';
   import Footer from './components/Footer';
   import BrowserInstance from './components/BrowserInstance';
+  import { identifyBrowser } from '../common/browser';
   import {
-    identifyBrowser,
     parseWindowsData,
     parseRecentsData,
     parseDevicesData,
-  } from '../common/tools';
+    getAllParsedData,
+  } from '../common/data';
 
   const browser = require('webextension-polyfill');
 
@@ -70,18 +77,21 @@
         thisBrowserID: 'unknown',
         thisBrowserName: 'unknown',
         thisTabPanels: [],
+        tempStorageContent: '... loading ...',
         tempWindowContent: '... loading ...',
         tempDeviceContent: '... loading ...',
         tempRecentsContent: '... loading ...',
       };
     },
     created: function () {
-      /** Use an anonymous functions to maintain 'this' context */
+      this.tempStorageContent = JSON.stringify(getAllParsedData(), undefined, 2);
+
+      //Use anonymous functions to maintain 'this' context
       chrome.instanceID.getID((id) => {
         this.thisBrowserID = id;
       });
 
-      this.thisBrowserName = identifyBrowser(navigator.userAgent);
+      this.thisBrowserName = identifyBrowser();
 
       chrome.windows.getAll({ populate: true }, (winArray) => {
         this.thisTabPanels.unshift(...parseWindowsData(winArray));
@@ -102,7 +112,7 @@
 </script>
 
 <style lang="scss" scoped>
-  /** primarily to trap scrollbars in central conatiner */
+  // to trap scrollbars in central conatiner
   main.v-content {
     width: 100vw;
     height: calc(100vh - 58px - 48px);

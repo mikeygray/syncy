@@ -65,7 +65,8 @@ yarn watch:dev
 - watch storage for changes, bind to UI
 - google oauth
 - sync storage to cloud
-- theming
+- options screen and integration
+- theming and ui refinement (loading animation, dense display, popup?)
 - testing with chrome, chromium, brave, edge and opera
 
 #### v0.2
@@ -87,14 +88,17 @@ yarn watch:dev
 - Given the advice about
   [chrome.storage limits](https://developer.chrome.com/extensions/storage#limits) the storage model
   keys must be as piece meal as possible, to allow for exacting read/write operations. Thusly, the
-  storage keys will be of a discriptive nature, i.e.
-  - `syncy-browserid-tab-windowid-tabid` : `{ tabdata }`
-  - `syncy-browserid-recent-tabid` : `{ tabdata }`
-  - `syncy-browserid-device-device_name-tabid` : `{ tabdata }`
+  storage keys will be of a discriptive nature. Currently used:
+  - `syncy-thisbrowserid` : `browserid`
+  - `syncy-(browserid)-name` : `browsername`
+  - `syncy-(browserid)-tab-(windowid)-(tabid)` : `{ tabdata }`
+  - `syncy-(browserid)-recent-(tabid)` : `{ tabdata }`
+  - `syncy-(browserid)-device-(deviceid)-name` : `devicename`
+  - `syncy-(browserid)-device-(deviceid)-(tabid)` : `{ tabdata }`
 
 ### current architectural thinking
 
-- `*.vue` - the 'views' - watch the 'model' for changes and reflects these
+- `*.vue` - the 'views' - watch the 'model' for changes and reflect them visually
 - `localstorage` - the 'model' - persistent central source of truth
 - `background.js` - the 'controller' - updates the model based on events from the browser and
   changes in the cloud

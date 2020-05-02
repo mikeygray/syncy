@@ -46,7 +46,7 @@
 
 <script>
   import LinksList from './LinksList';
-  import { getBrowserIcon } from '../../common/tools';
+  import { getBrowserIcon } from '../../common/browser';
   import { mdiExpandAll, mdiCollapseAll, mdiHelpCircle } from '@mdi/js';
   export default {
     props: {

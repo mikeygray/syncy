@@ -1,10 +1,40 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
+import {
+  getThisBrowserId,
+  refreshThisBrowserData,
+  getSetThisBrowserName,
+  getAllKeyValueData,
+} from './common/storage';
 
 /** open main page when extension icon is clicked */
 chrome.browserAction.onClicked.addListener(function () {
   var newURL = 'main/main.html';
   chrome.tabs.create({ url: newURL });
+});
+
+// can't do anything till we have a browserId
+getThisBrowserId((browserId) => {
+  console.log('Browser id ~ ' + browserId);
+
+  getSetThisBrowserName(browserId, (browserName) => {
+    console.log('Browser name ~ ' + browserName);
+  });
+
+  getAllKeyValueData((storedKeyValues) => {
+    console.info(
+      'Current local storage values: \n' + JSON.stringify(storedKeyValues, undefined, 2)
+    );
+  });
+
+  refreshThisBrowserData(browserId, () => {
+    console.log('Apparently refreshed browser data!');
+    getAllKeyValueData((storedKeyValues) => {
+      console.info(
+        'Current local storage values: \n' + JSON.stringify(storedKeyValues, undefined, 2)
+      );
+    });
+  });
 });
 
 /**
@@ -13,16 +43,19 @@ chrome.browserAction.onClicked.addListener(function () {
 
 /** debug storage output */
 chrome.storage.onChanged.addListener(function (changes, namespace) {
-  for (const key of changes) {
-    let storageChange = changes[key];
-    console.log(
-      'STORAGE CHANGED: Key "%s" in namespace "%s" ~ Old value: "%s", New value: "%s"',
-      key,
-      namespace,
-      storageChange.oldValue,
-      storageChange.newValue
-    );
-  }
+  console.log('STORAGE CHANGED: ', JSON.stringify(changes));
+  /*if (changes) {
+    for (const key of changes) {
+      let storageChange = changes[key];
+      console.log(
+        'STORAGE CHANGED: Key "%s" in namespace "%s" ~ Old value: "%s", New value: "%s"',
+        key,
+        namespace,
+        storageChange.oldValue,
+        storageChange.newValue
+      );
+    }
+  }*/
 });
 
 /** debug tab output */
