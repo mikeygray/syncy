@@ -4,287 +4,170 @@
 import { parseTabObject } from './data';
 import { getRandomId, identifyBrowser } from './browser';
 
-/**
- * @description tries to write a value to local storage, with verbose messaging
- * @param {string} key the storage key associated with the entry to write
- * @param {object|string} value the value to write to local storage
- * @param {function(boolean)} callback - callback with success boolean
- * @returns {boolean} boolean of success
- *
- * async to allow promise handling and returns
- */
-export const tryWriteToStorage = async (key, value, callback) => {
-  if (key && value) {
-    chrome.storage.local.set({ [key]: value }, () => {
-      let returnVal = false;
-      if (chrome.runtime.lastError) {
-        console.error('Problem writing to storage ~ ' + chrome.runtime.lastError.message);
-      } else {
-        console.info('Written to storage ~ {"' + key + '": ' + JSON.stringify(value) + '}');
-        returnVal = true;
-      }
-      if (callback) callback(returnVal);
-      return returnVal;
-    });
-  } else {
-    if (callback) callback(false);
-    return false;
-  }
-};
-
-/**
- * @description tries to read a value from local storage, with verbose messaging
- * @param {string} key the storage key associated with the entry to read
- * @param {function(object|string)} callback - callback with the read value, undefined for failure
- * @returns {object|string} value retrieved from storage, undefined for failure
- *
- * async to allow promise handling and returns
- */
-export const tryReadFromStorage = async (key, callback) => {
-  if (key) {
-    chrome.storage.local.get(key, (result) => {
-      let returnVal = undefined;
-      if (chrome.runtime.lastError) {
-        console.error(
-          'Problem reading key "' + key + '" from storage ~ ' + chrome.runtime.lastError.message
-        );
-      } else if (Object.entries(result).length < 1) {
-        console.info('Nothing to read for key "' + key + '" from storage');
-      } else {
-        returnVal = result[key];
-        console.info('Read from storage ~ {"' + key + '": ' + JSON.stringify(returnVal) + '}');
-      }
-      if (callback) callback(returnVal);
-      return returnVal;
-    });
-  } else if (callback) callback(undefined);
-};
-
-/**
- * @description tries to remove a value from local storage, with verbose messaging
- * @param {string} key the storage key associated with the entry to remove
- * @param {function(boolean)} callback - optional callback with success boolean
- * @returns {boolean} boolean of success
- *
- * async to allow promise handling and returns
- */
-export const tryRemoveFromStorage = async (key, callback) => {
-  if (key) {
-    chrome.storage.local.remove(key, () => {
-      let returnVal = false;
-      if (chrome.runtime.lastError) {
-        console.error(
-          'Problem removing key "' + key + '" from storage ~ ' + chrome.runtime.lastError.message
-        );
-      } else {
-        console.info('Removed from storage ~ { "' + key + '": ... }');
-        returnVal = true;
-      }
-      if (callback) callback(returnVal);
-      return returnVal;
-    });
-  } else {
-    if (callback) callback(false);
-    return false;
-  }
-};
+var browser = require('webextension-polyfill');
 
 /**
  * @description sets a persistent ID for this browser in local storage
- * @param {string} thisBrowserId - this browsers id
- * @param {function(boolean)} callback - callback with boolean of success
+ * @param {String} thisBrowserId - this browsers id
+ * @returns {Promise} promise of completion
  **/
-export const setThisBrowserId = (thisBrowserId, callback) => {
-  if (thisBrowserId) {
-    tryWriteToStorage('syncy-thisbrowserid', thisBrowserId, (success) => {
-      if (callback) callback(success);
+export const setThisBrowserId = (thisBrowserId) => {
+  return browser.storage.local
+    .set({
+      'syncy-thisbrowserid': thisBrowserId,
+    })
+    .catch((error) => {
+      console.error(`Error setting this browser id to "${thisBrowserId}" ~ ${error.message}`);
     });
-  } else if (callback) callback(false);
 };
 
 /**
- * @description gets the persistent ID for this browser from local storage, if there isn't one sets it based on browsers instance id
- * @param {function(string)} callback - callback with browserId, undefined for failure
+ * @description gets the persistent ID for this browser from local storage, if there isn't one sets it based on the browsers chome.instanceID
+ * @returns {Promise} promise resolving to this browser id
  **/
-export const getThisBrowserId = (callback) => {
-  chrome.storage.local.get(['syncy-thisbrowserid'], (result) => {
-    if (chrome.runtime.lastError || Object.entries(result).length < 1) {
-      chrome.instanceID.getID((instanceId) => {
-        tryWriteToStorage('syncy-thisbrowserid', instanceId, (success) => {
-          if (success) {
-            console.info('Set this browser id ~ {"syncy-thisbrowserid": ' + instanceId + '}');
-            callback(instanceId);
-          } else {
-            console.error('Problem writing instance id as browser id to storage');
-            if (callback) callback(undefined);
-          }
+export const getThisBrowserId = () => {
+  return browser.storage.local
+    .get('syncy-thisbrowserid')
+    .then((result) => {
+      if (!result) {
+        chrome.instanceID.getID((instanceId) => {
+          return setThisBrowserId(instanceId);
         });
-      });
-    } else {
-      const browserId = result['syncy-thisbrowserid'];
-      console.info('Got this browser id ~ {"syncy-thisbrowserid": ' + browserId + '}');
-      if (callback) callback(browserId);
-    }
-  });
+      } else return Promise.resolve(result['syncy-thisbrowserid']);
+    })
+    .catch((error) => {
+      console.error(`Error getting this browser id ~ ${error.message}`);
+    });
 };
 
 /**
  * @description gets or sets the browser name (chrome, edge, etc) in local storage
- * @param {string} thisBrowserId - this browsers id
- * @param {function(string)} callback - callback with browserName, or undefined for failure
+ * @param {String} thisBrowserId - this browsers id
+ * @returns {Promise} promise resolving to browser name
  **/
-export const getSetThisBrowserName = (thisBrowserId, callback) => {
-  if (thisBrowserId) {
-    const storageKey = 'syncy-' + thisBrowserId + '-name';
-    chrome.storage.local.get(storageKey, async (result) => {
-      if (chrome.runtime.lastError || Object.entries(result).length < 1) {
-        const thisBrowserName = identifyBrowser();
-        tryWriteToStorage(storageKey, thisBrowserName, (success) => {
-          if (success) {
-            console.info('Set this browser name ~ {"' + storageKey + '": ' + thisBrowserName + '}');
-            if (callback) callback(thisBrowserName);
-          } else {
-            console.error(
-              'Problem setting this browser name (id "' +
-                thisBrowserId +
-                '") ~ storage key "' +
-                storageKey +
-                '" could not be read or written'
-            );
-            if (callback) callback(undefined);
-          }
-        });
-      } else {
-        const thisBrowserName = result[storageKey];
-        console.info('Got this browser name ~ {"' + storageKey + '": ' + thisBrowserName + '}');
-        if (callback) callback(thisBrowserName);
-      }
+export const getSetThisBrowserName = (thisBrowserId) => {
+  const storageKey = `syncy-${thisBrowserId}-name`;
+  return browser.storage.local
+    .get(storageKey)
+    .then((result) => {
+      if (!result[storageKey]) {
+        const browserName = identifyBrowser();
+        return browser.storage.local.set({ [storageKey]: browserName });
+      } else return Promise.resolve(result[storageKey]);
+    })
+    .catch((error) => {
+      console.error(`Error get/setting this browser name ~ ${error.message}`);
     });
-  } else if (callback) callback(undefined);
-};
-
-/**
- * @description gets all local storage key-value pairs
- * @param {function(object)} callback - callback with object of all key-value data pairs, or undefined for failure
- **/
-export const getAllKeyValueData = (callback) => {
-  chrome.storage.local.get(null, (result) => {
-    if (chrome.runtime.lastError) {
-      console.error('Problem reading from storage ~ ' + chrome.runtime.lastError.message);
-      result = undefined;
-    } else if (Object.entries(result).length < 1)
-      console.info('No appropiate entries to read from local storage!');
-    if (callback) callback(result);
-  });
 };
 
 /**
  * @description gets all local storage key-value pairs associated with browserId
  * @param {string} browserId - browser id of data to retrieve
- * @param {function(object)} callback - callback with an object containing the browsers associated key-value pairs, or undefined for failure
+ * @returns {Promise} promise resolving to key-value pairs
  **/
-export const getAllBrowserKeyValues = (browserId, callback) => {
-  if (browserId) {
-    getAllKeyValueData((result) => {
-      let output = {};
-      if (result === undefined) {
-        console.error('Problem getting data for browse id "' + browserId + '"');
-        output = undefined;
-      } else if (Object.entries(result).length < 1) {
-        console.info('Nothing to retrieve for browse id "' + browserId + '"');
-      } else {
-        const browserKeyStart = 'syncy-' + browserId + '-';
-        for (const [key, value] of Object.entries(result)) {
-          if (key.startsWith(browserKeyStart)) output[key] = value;
+export const getAllBrowserKeyValues = (browserId) => {
+  return browser.storage.local
+    .get()
+    .then((results) => {
+      if (results) {
+        const storageKeyStart = `syncy-${browserId}-`;
+        let output = {};
+        if (Object.keys(results).length > 0) {
+          for (const [key, value] of Object.entries(results)) {
+            if (key.startsWith(storageKeyStart)) output[key] = value;
+          }
         }
-        console.info(
-          'Got all key-value data from storage for browser id "' +
-            browserId +
-            '" ~ \n' +
-            JSON.stringify(output, undefined, 2)
+        return Promise.resolve(output);
+      } else {
+        console.error(
+          `Error removing storage data for browser id "${browserId}" ~ storage items returned "${JSON.stringify(
+            results
+          )}" which is not truthy`
         );
+        return Promise.reject(results);
       }
-      if (callback) callback(output);
+    })
+    .catch((error) => {
+      console.error(`Error getting storage data for browser id "${browserId}" ~ ${error.message}`);
     });
-  } else if (callback) callback(undefined);
 };
 
 /**
- * @description removes all local storage data associated with browserId
- * @param {string} browserId - browser id of data to remove
- * @param {function(boolean)} callback - callback with boolean of success
+ * @description removes all local storage data associated with browserId, baring the id entry
+ * @param {String} browserId - browser id of data to remove
+ * @returns {Promise} promise of completion
  **/
-export const removeAllBrowserData = (browserId, callback) => {
-  if (browserId) {
-    getAllBrowserKeyValues(browserId, (result) => {
-      if (result === undefined) {
-        console.error('Problem removing data for browse id "' + browserId + '"');
-        callback(false);
-      } else if (Object.entries(result).length < 1) {
-        console.info('Nothing to remove for browse id "' + browserId + '"');
-        callback(true);
-      } else {
-        const finalValue = Object.keys(result).reduce((previousValue, key) => {
-          return tryRemoveFromStorage(key) && previousValue;
-        }, true);
-        console.info(
-          'Attept to remove all key-value data for browser id "' +
-            browserId +
-            '" ~ Successful: ' +
-            JSON.stringify(finalValue)
+export const removeAllBrowserData = (browserId) => {
+  return getAllBrowserKeyValues(browserId)
+    .then((results) => {
+      if (results) {
+        return Promise.all(
+          Object.keys(results).map((key) => {
+            return browser.storage.local.remove(key);
+          })
         );
-        if (callback && finalValue) callback(finalValue);
+      } else {
+        console.error(
+          `Error removing storage data for browser id "${browserId}" ~ browser keys returned "${JSON.stringify(
+            results
+          )}" which is not truthy`
+        );
+        return Promise.reject(results);
       }
+    })
+    .catch((error) => {
+      console.error(`Error removing storage data for browser id "${browserId}" ~ ${error.message}`);
     });
-  } else if (callback) callback(false);
 };
 
 /**
  * @description refreshes all of this browsers local storage data
- * @param {function()} callback
+ * @param {String} thisBrowserId - this browsers id
  * @returns {boolean}
  **/
-export const refreshThisBrowserData = (thisBrowserId, callback) => {
-  if (thisBrowserId === undefined) return undefined;
-
-  // to avoid stale data, remove all storage keys associated with this browser
-  // and then add back the id and name
-  // TODO: a compare function to at least minimise write operations?
-
-  removeAllBrowserData(thisBrowserId, (removeSuccess) => {
-    setThisBrowserId(thisBrowserId, (idSuccess) => {
-      getSetThisBrowserName(thisBrowserId, (browserName) => {
-        const success = removeSuccess && idSuccess && browserName;
-        if (success) {
-          // write all current tab data
-          chrome.windows.getAll({ populate: true }, (windowArray) => {
-            const now = new Date().getTime();
-            for (const window of windowArray) {
-              let windowId = window.id;
-              for (const tab of window.tabs) {
-                let storageKey = ['syncy', thisBrowserId, 'tab', windowId, tab.id].join('-');
-                // TODO: visibility on success
-                tryWriteToStorage(storageKey, parseTabObject(tab, now));
-              }
-            }
-          });
-
-          if (success && callback) callback();
-          return success;
-        } else {
-          console.error(
-            'Problem refreshing this browser local storage',
-            thisBrowserId,
-            removeSuccess,
-            idSuccess,
-            browserName
-          );
-
-          return undefined;
-        }
+export const refreshThisBrowserData = (thisBrowserId) => {
+  // to avoid stale data remove all storage keys associated with this browser then add back name
+  removeAllBrowserData(thisBrowserId)
+    .then(() => {
+      // DEBUG
+      browser.storage.local.get().then((allKeyValues) => {
+        console.info('[DEBUG] Local storage state:\n' + JSON.stringify(allKeyValues, undefined, 2));
       });
+    })
+    .then(() => {
+      return getSetThisBrowserName(thisBrowserId);
+    })
+    .then(() => {
+      return browser.windows.getAll({ populate: true });
+    })
+    .then((windowArray) => {
+      // cycle through and write tab data
+      return Promise.all(
+        Object.values(windowArray).reduce((accumulatedArray, window) => {
+          const now = new Date().getTime();
+          const windowId = window.id;
+          return accumulatedArray.concat(
+            Object.values(window.tabs).map((tab) => {
+              const storageKey = ['syncy', thisBrowserId, 'tab', windowId, tab.id].join('-');
+              return browser.storage.local.set({ [storageKey]: parseTabObject(tab, now) });
+            })
+          );
+        }, [])
+      );
+    })
+    .finally(() => {
+      // DEBUG
+      browser.storage.local.get().then((allKeyValues) => {
+        console.info(
+          '[DEBUG] New local storage state:\n' + JSON.stringify(allKeyValues, undefined, 2)
+        );
+      });
+    })
+    .catch((error) => {
+      console.error(`Error refreshing this browsers data id "${thisBrowserId}" ~ ${error.message}`);
     });
-  });
+
+  // TODO: (maybe) a compare function between what's there and what's to store?? (to minimise write operations)
 
   /*
   // write all recents data
@@ -307,7 +190,7 @@ export const refreshThisBrowserData = (thisBrowserId, callback) => {
     }
   });
 
-  // TODO: How do I maintain deviceId between refreshes?
+  // TODO: How do I maintain deviceId/deviceName between refreshes?
 
   // write all devices data
   chrome.sessions.getDevices(null, (deviceArray) => {
@@ -329,7 +212,7 @@ export const refreshThisBrowserData = (thisBrowserId, callback) => {
 
 /***************************************************
  *
- * TODO: UPDATE BELOW TO USE ASYNC-CALLBACKS
+ * TODO: UPDATE BELOW TO USE POLYFILL AND PROMISES
  *
  */
 

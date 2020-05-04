@@ -50,7 +50,11 @@ yarn watch:dev
   [tutorial](https://www.mynotepaper.com/build-a-google-chrome-extension-using-vuejs) (that also
   uses [vue-web-extension](https://github.com/Kocal/vue-web-extension)) I would of wasted a great
   deal of time getting started
-- And as always the patient people at [Stack Overflow](https://stackoverflow.com)
+- The amazing people responsible for
+  [webextension-polyfill](https://github.com/mozilla/webextension-polyfill), though I simay over my
+  ineptitude taking so long to properly harness it
+- And as always the patient people at [Stack Overflow](https://stackoverflow.com) and their
+  retention policy for old questions.
 
 ## My dev notes
 
@@ -61,6 +65,8 @@ yarn watch:dev
 - ~expand/collapse data cards~
 - ~wrap data cards in inclusive browser component~
 - ~expand/collapse all~
+- incorporate [webextension-polyfill](https://github.com/mozilla/webextension-polyfill) so I can use
+  Promises for storage operations
 - save/retrive data to storage
 - watch storage for changes, bind to UI
 - google oauth
