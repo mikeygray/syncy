@@ -10,11 +10,11 @@ chrome.browserAction.onClicked.addListener(function () {
   var newURL = 'main/main.html';
   chrome.tabs.create({ url: newURL });
 });
-
+/*
 browser.storage.local.get().then((allKeyValues) => {
   console.info('Current local storage state:\n' + JSON.stringify(allKeyValues, undefined, 2));
 });
-
+*/
 getThisBrowserId()
   .then((browserId) => {
     return refreshThisBrowserData(browserId);

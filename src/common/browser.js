@@ -4,7 +4,21 @@ import { braveIcon, vivaldiIcon } from './extraicons';
 /**
  * @description checks url for "internal style" urls
  */
-export const isUrlBrowserInternal = (url = '') => {
+export const deviceNameToDeviceId = (deviceName) => {
+  return deviceName
+    .replace(/[^a-zA-Z0-9 ]/g, '')
+    .replace(/ /g, '_')
+    .toLowerCase();
+};
+
+export const deviceIdToDeviceName = (deviceId) => {
+  return deviceId.replace(/_/g, ' ');
+};
+
+/**
+ * @description checks url for "internal style" urls
+ */
+export const isUrlBrowserInternal = (url) => {
   return [
     'chrome:',
     'chrome-extension:',
@@ -14,13 +28,6 @@ export const isUrlBrowserInternal = (url = '') => {
     'settings',
     'extensions',
   ].some((substring) => url.startsWith(substring));
-};
-
-/**
- * @description creates a random 10 char alphanumerical id
- */
-export const getRandomId = () => {
-  return Math.random().toString(36).substring(2, 15);
 };
 
 /**

@@ -2,7 +2,7 @@
 /* eslint-disable no-undef */
 
 import { parseTabObject } from './data';
-import { getRandomId, identifyBrowser } from './browser';
+import { identifyBrowser, deviceNameToDeviceId } from './browser';
 
 var browser = require('webextension-polyfill');
 
@@ -123,17 +123,11 @@ export const removeAllBrowserData = (browserId) => {
 /**
  * @description refreshes all of this browsers local storage data
  * @param {String} thisBrowserId - this browsers id
- * @returns {boolean}
+ * @returns {Promise} promise of completion
  **/
 export const refreshThisBrowserData = (thisBrowserId) => {
   // to avoid stale data remove all storage keys associated with this browser then add back name
-  removeAllBrowserData(thisBrowserId)
-    .then(() => {
-      // DEBUG
-      browser.storage.local.get().then((allKeyValues) => {
-        console.info('[DEBUG] Local storage state:\n' + JSON.stringify(allKeyValues, undefined, 2));
-      });
-    })
+  return removeAllBrowserData(thisBrowserId)
     .then(() => {
       return getSetThisBrowserName(thisBrowserId);
     })
@@ -141,12 +135,12 @@ export const refreshThisBrowserData = (thisBrowserId) => {
       return browser.windows.getAll({ populate: true });
     })
     .then((windowArray) => {
-      // cycle through and write tab data
+      // cycle through windows and gather storage write promises
       return Promise.all(
-        Object.values(windowArray).reduce((accumulatedArray, window) => {
+        Object.values(windowArray).reduce((accumulatedPromiseArray, window) => {
           const now = new Date().getTime();
           const windowId = window.id;
-          return accumulatedArray.concat(
+          return accumulatedPromiseArray.concat(
             Object.values(window.tabs).map((tab) => {
               const storageKey = ['syncy', thisBrowserId, 'tab', windowId, tab.id].join('-');
               return browser.storage.local.set({ [storageKey]: parseTabObject(tab, now) });
@@ -155,76 +149,79 @@ export const refreshThisBrowserData = (thisBrowserId) => {
         }, [])
       );
     })
+    .then(() => {
+      return browser.sessions.getRecentlyClosed();
+    })
+    .then((recentsArray) => {
+      // cycle through recents and gather storage write promises
+      return Promise.all(
+        Object.values(recentsArray).reduce((accumulatedPromiseArray, recent) => {
+          const whenModified = recent.lastModified;
+          if (Object.prototype.hasOwnProperty.call(recent, 'window')) {
+            return accumulatedPromiseArray.concat(
+              Object.values(recent.window.tabs).map((tab) => {
+                const storageKey = ['syncy', thisBrowserId, 'recent', tab.sessionId].join('-');
+                return browser.storage.local.set({
+                  [storageKey]: parseTabObject(tab, whenModified),
+                });
+              })
+            );
+          } else if (Object.prototype.hasOwnProperty.call(recent, 'tab')) {
+            const storageKey = ['syncy', thisBrowserId, 'recent', recent.tab.sessionId].join('-');
+            return accumulatedPromiseArray.concat(
+              browser.storage.local.set({ [storageKey]: parseTabObject(recent.tab, whenModified) })
+            );
+          }
+        }, [])
+      );
+    })
+    .then(() => {
+      return browser.sessions.getDevices();
+    })
+    .then((devicesArray) => {
+      // cycle through device entries and gather storage write promises
+      // TODO: I seem to have done this with for loops?
+      return Promise.all(
+        Object.values(devicesArray).reduce((accumulatedPromiseArray, device) => {
+          const deviceId = deviceNameToDeviceId(device.deviceName);
+          for (const session of device.sessions) {
+            const lastModifed = session.lastModifed;
+            for (const tab of session.window.tabs) {
+              const tabsId = tab.sessionId.split('.').pop();
+              const storageKey = ['syncy', thisBrowserId, 'device', deviceId, tabsId].join('-');
+              accumulatedPromiseArray.concat(
+                browser.storage.local.set({ [storageKey]: parseTabObject(tab, lastModifed) })
+              );
+            }
+          }
+          return accumulatedPromiseArray;
+        }, [])
+      );
+    })
     .finally(() => {
-      // DEBUG
+      /* DEBUG
       browser.storage.local.get().then((allKeyValues) => {
         console.info(
           '[DEBUG] New local storage state:\n' + JSON.stringify(allKeyValues, undefined, 2)
         );
-      });
+      });*/
     })
     .catch((error) => {
       console.error(`Error refreshing this browsers data id "${thisBrowserId}" ~ ${error.message}`);
     });
 
-  // TODO: (maybe) a compare function between what's there and what's to store?? (to minimise write operations)
-
-  /*
-  // write all recents data
-  chrome.sessions.getRecentlyClosed(null, (recentArray) => {
-    for (const recent of recentArray) {
-      const whenModified = recent.lastModified;
-      if (Object.prototype.hasOwnProperty.call(recent, 'window')) {
-        for (const tab of recent.window.tabs) {
-          const storageKey = ['syncy', thisBrowserId, 'recent', tab.id].join('-');
-          isSuccess =
-            isSuccess &&
-            tryWriteToStorage(storageKey, parseTabObject(tab, whenModified)) !== undefined;
-        }
-      } else {
-        const storageKey = ['syncy', thisBrowserId, 'recent', recent.tab.id].join('-');
-        isSuccess =
-          isSuccess &&
-          tryWriteToStorage(storageKey, parseTabObject(recent.tab, whenModified)) !== undefined;
-      }
-    }
-  });
-
-  // TODO: How do I maintain deviceId/deviceName between refreshes?
-
-  // write all devices data
-  chrome.sessions.getDevices(null, (deviceArray) => {
-    for (const device of deviceArray) {
-      const deviceId = getRandomId();
-      for (const session of device.sessions) {
-        const whenModified = session.lastModified;
-        for (const tab of session.window.tabs) {
-          const storageKey = ['syncy', thisBrowserId, 'device', deviceId, tab.id].join('-');
-          isSuccess =
-            isSuccess &&
-            tryWriteToStorage(storageKey, parseTabObject(tab, whenModified)) !== undefined;
-        }
-      }
-    }
-  });
-*/
+  // TODO: compare functions between storage and current state? (to minimise write operations)
 };
-
-/***************************************************
- *
- * TODO: UPDATE BELOW TO USE POLYFILL AND PROMISES
- *
- */
 
 /**
  * @description updates or creates tab data in local storage, only updating the data passed in the tab object
- * @returns boolean of isSuccess
+ * @returns {Promise} promise of completion
  */
-export const createUpdateTabData = (browserId = '', windowId = -1, tab = {}) => {
+export const createUpdateTabData = async (browserId, windowId, tab) => {
   const storageKey = ['syncy', browserId, 'tab', windowId, tab.id].join('-');
   //get the current tab from storage if it exists
-  let newTab = tryReadFromStorage(storageKey);
-  if (newTab === undefined) {
+  let newTab = await browser.storage.local.get(storageKey);
+  if (Object.values(newTab).length < 1) {
     newTab = tab;
   } else {
     // tab exists in storage so only change passed data
@@ -234,14 +231,14 @@ export const createUpdateTabData = (browserId = '', windowId = -1, tab = {}) => 
       }
     }
   }
-  return tryWriteToStorage(storageKey, tab) !== undefined;
+  return browser.storage.local.set({ [storageKey]: newTab });
 };
 
 /**
  * @description moves tab data in local storage to new index and/or window
- * @returns boolean of isSuccess
+ * @returns {Promise} promise of completion
  */
-export const moveTab = (
+export const moveTab = async (
   browserId = '',
   currentWindowId = -1,
   tabId = -1,
@@ -249,10 +246,10 @@ export const moveTab = (
   newWindowId = -1
 ) => {
   let storageKey = ['syncy', browserId, 'tab', currentWindowId, tab.id].join('-');
-  let tab = tryReadFromStorage(storageKey);
+  let tab = await browser.storage.local.get(storageKey);
   if (tab === undefined || (newWindowId < 0 && newIndex < 0)) {
     // if there's no tab to change, or nothing to change
-    return false;
+    return Promise.resolve(tab);
   } else {
     if (newWindowId >= 0) {
       // we have to move this tab to a new storage key
@@ -262,5 +259,5 @@ export const moveTab = (
       tab.index = newIndex;
     }
   }
-  return tryWriteToStorage(storageKey, tab) !== undefined;
+  return browser.storage.local.set({ [storageKey]: tab });
 };

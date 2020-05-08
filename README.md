@@ -91,15 +91,18 @@ yarn watch:dev
   camelCase for variables and functions
 - [Don't use arrow functions](https://vuejs.org/v2/guide/instance.html#Instance-Lifecycle-Hooks) in
   component callbacks!
+- To maintain id's for devices the `deviceid` has to be recreatable from `deviceName` (as this data
+  doesn't come with it's own id). For now, keeping this simple and just stripping out
+  non-alphanumerical characters and replacing spaces. This can be revisited by changing functions
+  `deviceNameToDeviceId` and `deviceIdToDeviceName`
 - Given the advice about
   [chrome.storage limits](https://developer.chrome.com/extensions/storage#limits) the storage model
-  keys must be as piece meal as possible, to allow for exacting read/write operations. Thusly, the
+  keys must be as piecemeal as possible, allowing for exacting read/write operations. Thusly, the
   storage keys will be of a discriptive nature. Currently used:
   - `syncy-thisbrowserid` : `browserid`
   - `syncy-(browserid)-name` : `browsername`
   - `syncy-(browserid)-tab-(windowid)-(tabid)` : `{ tabdata }`
   - `syncy-(browserid)-recent-(tabid)` : `{ tabdata }`
-  - `syncy-(browserid)-device-(deviceid)-name` : `devicename`
   - `syncy-(browserid)-device-(deviceid)-(tabid)` : `{ tabdata }`
 
 ### current architectural thinking
